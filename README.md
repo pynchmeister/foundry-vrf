@@ -70,3 +70,7 @@ For a full list of configuration options, see the Foundry [configuration documen
 ## Acknowledgements
 
 - [VRFContract](https://github.com/realran/VRFContract)
+- [Verifiable Random Functions](https://people.csail.mit.edu/silvio/Selected%20Scientific%20Papers/Pseudo%20Randomness/Verifiable_Random_Functions.pdf)
+- [Making NSEC5 Practical for DNSSEC](https://eprint.iacr.org/2017/099.pdf)
+- [VRFs](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-vrf-05)
+

@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 /// @title Verifiable Random Function (VRF) -- generates a random number in Solidity
 /// @author acyclicgraphs@gmail.com
 
+/// @notice adapted from realran implemetation
+
 contract VerifiableRandomFunction {
 // See https://www.secg.org/sec2-v2.pdf, section 2.4.1, for these constants.
   // Number of points in Secp256k1
