@@ -1,7 +1,7 @@
 pragma solidity ^0.8.13;
 
 /// @title Verifiable Random Function (VRF) -- generates a random number in Solidity
-/// @author acyclicgraphs@gmail.com
+/// @author Amnot <@pynchmeister>
 
 /// @notice adapted from realran implemetation
 
@@ -71,12 +71,20 @@ contract VerifiableRandomFunction {
 
   // Hash x uniformly into {0, ..., FIELD_SIZE-1}.
   function fieldHash(bytes memory b) internal pure returns (uint256 x_) {
-    x_ = uint256(keccak256(b));
+    uint256 x_;
+    assembly {
+      x_ := keccak256(add(b, 32), mload(b))
+    }
+
     // Rejecting if x >= FIELD_SIZE corresponds to step 2.1 in section 2.3.4 of
     // http://www.secg.org/sec1-v2.pdf , which is part of the definition of
     // string_to_point in the IETF draft
     while (x_ >= FIELD_SIZE) {
-      x_ = uint256(keccak256(abi.encodePacked(x_)));
+      assembly {
+        let m := mload(0x40) // Get free memory pointer
+        mstore(m, x_)        // Store the value of x_ at the memory location
+        x_ := keccak256(m, 32) // Compute keccak256 hash and store the result in x_
+      }
     }
   }
 
