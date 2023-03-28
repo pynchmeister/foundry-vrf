@@ -6,6 +6,15 @@ pragma solidity ^0.8.13;
 /// @notice adapted from realran implemetation
 
 contract VerifiableRandomFunction {
+  // Define custom errors
+    error BigModExpFailure();
+    error ZeroScalar();
+    error InvalidXOrdinate();
+    error InvalidYOrdinate();
+    error PointsNotDistinct();
+    error FirstMulCheckFailed();
+    error SecondMulCheckFailed();
+    error InvalidProof();
 // See https://www.secg.org/sec2-v2.pdf, section 2.4.1, for these constants.
   // Number of points in Secp256k1
   uint256 private constant GROUP_ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
@@ -39,8 +48,8 @@ contract VerifiableRandomFunction {
       )
     }
     if (callResult == 0) {
-      revert("bigModExp failure!");
-    }
+      revert BigModExpFailure();
+      }
     return output[0];
   }
 
@@ -146,7 +155,9 @@ contract VerifiableRandomFunction {
     uint256 scalar,
     uint256[2] memory product
   ) internal pure returns (bool verifies) {
-    require(scalar != 0, "zero scalar"); // Rules out an ecrecover failure case
+    if (scalar == 0) {
+            revert ZeroScalar();
+        } // Rules out an ecrecover failure case
     uint256 x = multiplicand[0]; // x ordinate of multiplicand
     uint8 v = multiplicand[1] % 2 == 0 ? 27 : 28; // parity of y ordinate
     // https://ethresear.ch/t/you-can-kinda-abuse-ecrecover-to-do-ecmul-in-secp256k1-today/2384/9
@@ -388,27 +399,40 @@ contract VerifiableRandomFunction {
     uint256[2] memory cGammaWitness,
     uint256[2] memory sHashWitness,
     uint256 zInv
-  ) internal view {
-    unchecked {
-      require(isOnCurve(pk), "public key is not on curve");
-      require(isOnCurve(gamma), "gamma is not on curve");
-      require(isOnCurve(cGammaWitness), "cGammaWitness is not on curve");
-      require(isOnCurve(sHashWitness), "sHashWitness is not on curve");
-      // Step 5. of IETF draft section 5.3 (pk corresponds to 5.3's Y, and here
-      // we use the address of u instead of u itself. Also, here we add the
-      // terms instead of taking the difference, and in the proof construction in
-      // vrf.GenerateProof, we correspondingly take the difference instead of
-      // taking the sum as they do in step 7 of section 5.1.)
-      require(verifyLinearCombinationWithGenerator(c, pk, s, uWitness), "addr(c*pk+s*g)!=_uWitness");
-      // Step 4. of IETF draft section 5.3 (pk corresponds to Y, seed to alpha_string)
-      uint256[2] memory hash = hashToCurve(pk, seed);
-      // Step 6. of IETF draft section 5.3, but see note for step 5 about +/- terms
-      uint256[2] memory v = linearCombination(c, gamma, cGammaWitness, s, hash, sHashWitness, zInv);
-      // Steps 7. and 8. of IETF draft section 5.3
-      uint256 derivedC = scalarFromCurvePoints(hash, pk, gamma, uWitness, v);
-      require(c == derivedC, "invalid proof");
+) internal view {
+    // Ensure points are on the curve
+    if (!isOnCurve(pk)) {
+        revert InvalidXOrdinate();
     }
-  }
+    if (!isOnCurve(gamma)) {
+        revert InvalidYOrdinate();
+    }
+    if (!isOnCurve(cGammaWitness)) {
+        revert InvalidXOrdinate();
+    }
+    if (!isOnCurve(sHashWitness)) {
+        revert InvalidYOrdinate();
+    }
+
+    // Verify the linear combination
+    if (!verifyLinearCombinationWithGenerator(c, pk, s, uWitness)) {
+        revert PointsNotDistinct();
+    }
+
+    // Calculate hash point
+    uint256[2] memory hash = hashToCurve(pk, seed);
+
+    // Calculate linear combination point
+    uint256[2] memory v = linearCombination(c, gamma, cGammaWitness, s, hash, sHashWitness, zInv);
+
+    // Calculate derivedC using scalarFromCurvePoints
+    uint256 derivedC = scalarFromCurvePoints(hash, pk, gamma, uWitness, v);
+
+    // Verify that the provided c matches derivedC
+    if (c != derivedC) {
+        revert InvalidProof();
+    }
+}
 
   // Domain-separation tag for the hash used as the final VRF output.
   // Corresponds to vrfRandomOutputHashPrefix in vrf.go
