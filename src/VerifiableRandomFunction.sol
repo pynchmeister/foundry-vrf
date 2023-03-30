@@ -1,4 +1,5 @@
-pragma solidity ^0.8.13;
+// SPDX-Liscense-Identifier: MIT
+pragma solidity ^0.8.15;
 
 /// @title Verifiable Random Function (VRF) -- generates a random number in Solidity
 /// @author Amnot <@pynchmeister>
